@@ -125,3 +125,90 @@ button.addEventListener('click', p.showMessage)
 // Show undefined because , the "this" is not ref the content
 
 // Using decorators bind this
+
+interface ValidatorConfig {
+    [property: string]: {
+        [validatableProp: string]: string[] // ['required', 'positive']
+    }
+}
+// DECORATORS FOR BINDING 
+const registeredValidators: ValidatorConfig = {}
+function Required(target: any, propertyName: string) {
+    console.log(target.constructor.name, "(1)")
+    registeredValidators[target.constructor.name] = {
+        ...registeredValidators[target.constructor.name],
+        [propertyName]: ['required']
+    }
+}
+function PositiveNumber(target: any, propertyName: string) {
+    console.log(target.constructor.name, "(2)")
+    registeredValidators[target.constructor.name] = {
+        ...registeredValidators[target.constructor.name],
+        [propertyName]: ['positive']
+    }
+
+}
+function validate(obj: any) {
+    console.log(obj.constructor.name, "(3)")
+
+    const objValidateConfig = registeredValidators[obj.constructor.name];
+    if (!objValidateConfig) {
+        return true;
+    }
+    let isValid = true;
+    console.log(objValidateConfig, "(4)")
+    for (const prop in objValidateConfig) {
+        for (const validator of objValidateConfig[prop]) {
+
+            switch (validator) {
+                case 'required':
+                    isValid = isValid && !!obj[prop]
+                    break;
+                case 'positive':
+                    isValid = isValid && obj[prop] > 0
+                    break;
+            }
+        }
+    }
+    return isValid;
+}
+class Course {
+    @Required
+    title: string;
+    @PositiveNumber
+    price: number;
+    constructor(t: string, p: number) {
+        this.title = t;
+        this.price = p;
+
+    }
+
+}
+
+
+const courseForm = document.querySelector('form')!;
+
+courseForm.addEventListener('submit', event => {
+    event.preventDefault();
+    // @get Element 
+    const titleEl = document.getElementById('title') as HTMLInputElement;
+    const priceEl = document.getElementById('price') as HTMLInputElement;
+
+    // @get Values 
+    const title = titleEl.value;
+    const price = +priceEl.value;
+    // CÓ thể như này nhưng ý 
+    // tưởng muốn là có decorator chạy trước rồi luôn trong class
+    // if(title.trim().length > 0 || price <= 0 ) {
+
+    // }
+    // validate(createCourse)
+    const createCourse = new Course(title, price)
+    //  validate(createCourse) ?? check xem dc hay khong 
+    if (!validate(createCourse)) {
+        alert('Invalid input, please try again !')
+        return;
+    }
+    console.log(createCourse)
+
+})
