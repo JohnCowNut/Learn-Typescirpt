@@ -22,39 +22,43 @@ function AutoBind(_: any, _2: string | Symbol, description: PropertyDescriptor) 
 
 
 /* === Start:  Validate=== */
-interface ValidatorConfig {
-    [property: string]: {
-        [validatableProp: string]: string[] // ['required', 'positive']
-    }
-}
-// DECORATORS FOR BINDING 
-const registeredValidators: ValidatorConfig = {}
-function Required(target: any, propertyName: string) {
-    console.log("=== (1) ===  Required")
+interface Validatable {
+    value: string | number;
+    required?: boolean;
+    minLength?: number;
+    maxLength?: number;
+    min?: number;
+    max?: number;
 
-    registeredValidators[target.constructor.name] = {
-        ...registeredValidators[target.constructor.name],
-        [propertyName]: ['required']
-    }
 }
-function validate(obj: any) {
-    const objValidateConfig = registeredValidators[obj.constructor.name];
-    if (!objValidateConfig) {
-        return true;
-    }
+
+// DECORATORS FOR BINDING 
+
+function validate(validatableInput: Validatable) {
     let isValid = true;
 
-    for (const prop in objValidateConfig) {
-        for (const validator of objValidateConfig[prop]) {
-
-            switch (validator) {
-                case 'required':
-                    isValid = isValid && !!obj[prop]
-                    break;
-            }
+    if (validatableInput.required) {
+        if (typeof validatableInput.value === 'string') {
+            isValid = isValid && validatableInput.value.toString().trim().length !== 0
+            // @params : true = true && false 
+            // => false 
+            // true  = true && true(1) 
+            // => true(1)
         }
     }
-    return isValid;
+    if (validatableInput.minLength != null && typeof validatableInput.value === 'string') {
+        isValid = isValid && validatableInput.value.length >= validatableInput.minLength
+    }
+    if (validatableInput.maxLength != null && typeof validatableInput.value === 'string') {
+        isValid = isValid && validatableInput.value.length <= validatableInput.maxLength
+    }
+    if (validatableInput.min != null && typeof validatableInput.value === 'number') {
+        isValid = isValid && validatableInput.value >= validatableInput.min
+    }
+    if (validatableInput.max != null && typeof validatableInput.value === 'number') {
+        isValid = isValid && validatableInput.value <= validatableInput.max
+    }
+    return isValid
 }
 /**
  * === End: Validate
@@ -67,11 +71,10 @@ class ProjectInput {
     templateElement: HTMLTemplateElement;
     hostElement: HTMLDivElement;
     element: HTMLFormElement;
-    @Required
     titleElementInput: HTMLInputElement;
-    @Required
+
     descriptionInputElement: HTMLInputElement;
-    @Required
+
     peopleInputElement: HTMLInputElement;
     constructor() {
         this.templateElement = document.getElementById('project-input')! as HTMLTemplateElement;
@@ -113,12 +116,25 @@ class ProjectInput {
         const enteredTitle = this.titleElementInput.value;
         const enteredDescription = this.descriptionInputElement.value;
         const enteredPeople = this.peopleInputElement.value;
-        const obj = {
-            titleElementInput: enteredTitle,
-            descriptionInputElement: enteredDescription,
-            peopleInputElement: enteredPeople
+
+        const titleValidatable: Validatable = {
+            value: enteredTitle,
+            required: true,
         }
-        if (validate(obj)) {
+        const descriptionValidate: Validatable = {
+            value: enteredDescription,
+            required: true,
+            minLength: 5
+        }
+        const peopleValidate: Validatable = {
+            value: +enteredPeople,
+            required: true,
+            min: 1,
+            max: 5
+        }
+        // Solution 
+        // @params : validate ({value: enteredTitle,required: true, minLength: 5})
+        if (!validate(titleValidatable) || !validate(peopleValidate) || !validate(descriptionValidate)) {
             alert('Invalid Input Please Try Again');
             return;
         } else {
