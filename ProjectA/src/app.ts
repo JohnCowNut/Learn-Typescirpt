@@ -1,3 +1,47 @@
+// Projects State Management
+
+class ProjectState {
+    // create submition partten when something change at here
+    private listeners: any[] = []
+    private projects: any[] = [
+
+    ]
+    private static instance: ProjectState
+    private constructor() {
+
+    }
+    static getInstance() {
+        if (this.instance) {
+            return this.instance
+        }
+        this.instance = new ProjectState();
+        return this.instance;
+    }
+    // How to class add Project inside sumbit handle ProjectInput
+    // How to update Project at Project List
+    addProject(title: string, description: string, numOfPeople: number) {
+        const newProject = {
+            id: Math.random().toString(),
+            title,
+            description,
+            people: numOfPeople
+        }
+        this.projects.push(newProject);
+        // Call listenr func 
+        for (const listenerFn of this.listeners) {
+            // create shallow array not original array state 
+            listenerFn(this.projects.slice())
+        }
+
+    }
+    addListener(listenerFn: Function) {
+        this.listeners.push(listenerFn)
+    }
+}
+
+const projectState = ProjectState.getInstance();
+
+
 // Decorator
 
 /*
@@ -64,7 +108,47 @@ function validate(validatableInput: Validatable) {
  * === End: Validate
  */
 
+// ProjectList Class 
+class ProjectList {
+    templateElement: HTMLTemplateElement;
+    hostElement: HTMLDivElement;
+    element: HTMLElement;
+    assignedProjects: any[]
+    constructor(private type: 'active' | 'finished') {
+        this.templateElement = document.getElementById('project-list')! as HTMLTemplateElement;
+        this.hostElement = document.getElementById('app')! as HTMLDivElement;
+        this.assignedProjects = []
+        const importedNode = document.importNode(this.templateElement.content, true);
+        // form Element  !v
+        this.element = importedNode.firstElementChild as HTMLElement;
 
+        this.element.id = `${type}-projects`;
+        // resigter listener 
+        projectState.addListener((projects: any[]) => {
+            this.assignedProjects = projects;
+            this.renderProject();
+        })
+        this.attach();
+        this.renderContent();
+    }
+    private renderProject() {
+        const listEl = document.getElementById(`${this.type}-projects-list`)! as HTMLUListElement;
+        for (const prjItem of this.assignedProjects) {
+            const listItem = document.createElement('li');
+            listItem.textContent = prjItem.title;
+            listEl.appendChild(listItem)
+        }
+    }
+    private renderContent() {
+        const listID = `${this.type}-projects-list`;
+        this.element.querySelector('ul')!.id = listID
+        this.element.querySelector('h2')!.textContent = this.type.toUpperCase() + ' PROJECTS'
+    }
+
+    private attach() {
+        this.hostElement.insertAdjacentElement('beforeend', this.element)
+    }
+}
 // Project Input
 class ProjectInput {
 
@@ -101,7 +185,9 @@ class ProjectInput {
         // check if userInput is Tuple
         if (Array.isArray(userInput)) {
             const [title, desc, people] = userInput;
-            console.log(title, desc, people)
+            // Create Project 
+            projectState.addProject(title, desc, people)
+
             this.clearInputs()
         }
     }
@@ -157,3 +243,5 @@ class ProjectInput {
     }
 }
 const test1 = new ProjectInput()
+const activePrjList = new ProjectList('active')
+const finishedPrjList = new ProjectList('finished')
